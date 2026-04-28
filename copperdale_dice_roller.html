@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copperdale Dice Roller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .dice-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 72px;
+            font-weight: bold;
+            text-align: center;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .dice-display.rolling {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        .roll-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 30px;
+        }
+        
+        .roll-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .roll-button:active {
+            transform: translateY(0);
+        }
+        
+        .roll-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .result-description {
+            color: #4a5568;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .history {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .history-item {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .history-item strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Copperdale Dice Roller</h1>
+        <p class="subtitle">Roll 1d20 at the start of each season</p>
+        
+        <div class="dice-display" id="diceDisplay">
+            Roll the dice!
+        </div>
+        
+        <button class="roll-button" id="rollButton" onclick="rollDice()">
+            🎲 Roll Seasonal Event (d20)
+        </button>
+        
+        <div class="result" id="result">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-description" id="resultDescription"></div>
+        </div>
+        
+        <div class="history">
+            <div class="history-title">Last 10 Rolls</div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        const events = [
+            { name: "Bountiful Harvest", description: "All current plants on your active lot give double harvest this week." },
+            { name: "Storm Damage", description: "Add Mold or Filthy to a community lot." },
+            { name: "Discovery – Wild Horse", description: "Adopt a Horse for §200 or purchase a new one for §1000. If you can't afford either, the horse runs off." },
+            { name: "New Settlers Early", description: "Add 1 new survivor household (max 15k total value) on an empty lot." },
+            { name: "Plague Outbreak", description: "Delete all Medicine from all Sims inventories." },
+            { name: "Discovery — Chickens", description: "Place 1 Chicken at full price (§150–200). Requires Chicken Coop (§400) first. If you can't afford the coop, you can't get the chicken." },
+            { name: "Rebellion", description: "Remove one lot trait from any lot you own." },
+            { name: "Economic Boom", description: "Remove one lot challenge (Filthy, Mold, Maintenance Troubles, etc.) from any active or community lot." },
+            { name: "Discovery — Goat or Sheep", description: "Place 1 Goat or Sheep at full price (§150–200)." },
+            { name: "Discovery — Medicine", description: "Purchase 2 bottles of medicine (§50 each)." },
+            { name: "Famine", description: "Delete all harvestables in all inventories." },
+            { name: "Baby Boom", description: "Add the On Ley Line lot trait to your active lot. The trait stays until removed." },
+            { name: "Raider Attack", description: "Raiders steal up to §1,000 from household inventory. Horse protection applies during Summer Getaway: 1 horse = roll 1d6 (1-2 lose §1k, 3-4 lose §500, 5-6 escape). 2+ horses = roll multiple dice, take best result. No horses OR not Summer Getaway = automatically lose §1,000." },
+            { name: "Discovery — Generator", description: "Place 1 Household Power Generator at full price (§1,465)." },
+            { name: "Unexpected Visitor", description: "1 Sim or small family comes for a week-long visit to your active household (extra mouths to feed — possible drama or allies)." },
+            { name: "Drought", description: "Delete half of all plants currently on your active lot." },
+            { name: "Discovery — Solar Panel", description: "Place up to 1 Solar Panel at full price (§675–850)." },
+            { name: "Discovery — Large Livestock", description: "Place 1 Cow (§400), Llama, or Horse at full price. Requires Animal Shed (§500) and Horse Bed (§50) for horses." },
+            { name: "Discovery — Seeds", description: "Purchase one seed packet at §35." },
+            { name: "Mystery Benefactor", description: "Remove one negative lot trait OR add one positive OR gain §1,500." }
+        ];
+
+        let history = [];
+
+        function rollDice() {
+            const button = document.getElementById('rollButton');
+            const display = document.getElementById('diceDisplay');
+            const result = document.getElementById('result');
+            
+            // Disable button during roll
+            button.disabled = true;
+            
+            // Add rolling animation
+            display.classList.add('rolling');
+            
+            // Simulate rolling animation
+            let counter = 0;
+            const rollInterval = setInterval(() => {
+                display.textContent = Math.floor(Math.random() * 20) + 1;
+                counter++;
+                
+                if (counter >= 10) {
+                    clearInterval(rollInterval);
+                    
+                    // Final roll
+                    const finalRoll = Math.floor(Math.random() * 20) + 1;
+                    display.textContent = finalRoll;
+                    
+                    // Show result
+                    const event = events[finalRoll - 1];
+                    document.getElementById('resultTitle').textContent = `${finalRoll}. ${event.name}`;
+                    document.getElementById('resultDescription').textContent = event.description;
+                    result.classList.add('show');
+                    
+                    // Add to history
+                    addToHistory(finalRoll, event.name);
+                    
+                    // Remove rolling animation
+                    display.classList.remove('rolling');
+                    
+                    // Re-enable button
+                    button.disabled = false;
+                }
+            }, 100);
+        }
+
+        function addToHistory(roll, eventName) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            history.unshift({ roll, eventName, time: timeString });
+            
+            // Keep only last 10
+            if (history.length > 10) {
+                history.pop();
+            }
+            
+            // Update display
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = history.map(item => 
+                `<div class="history-item"><strong>Roll ${item.roll}:</strong> ${item.eventName} <span style="float: right; color: #a0aec0;">${item.time}</span></div>`
+            ).join('');
+        }
+    </script>
+</body>
+</html>
